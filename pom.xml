@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.wangyin.qa</groupId>
+    <artifactId>hudson_jmeter</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.jmeter</groupId>
+            <artifactId>ApacheJMeter_core</artifactId>
+            <version>3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jmeter</groupId>
+            <artifactId>ApacheJMeter_java</artifactId>
+            <version>3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.unitils</groupId>
+            <artifactId>unitils-core</artifactId>
+            <version>3.4.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.9.4</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.4</version>
+            <scope>test</scope>
+        </dependency>
+        <!--<dependency>-->
+        <!--<groupId>org.hamcrest</groupId>-->
+        <!--<artifactId>hamcrest-parent</artifactId>-->
+        <!--<version>1.3</version>-->
+        <!--<scope>test</scope>-->
+        <!--</dependency>-->
+    </dependencies>
+
+    <build>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <testSourceDirectory>src/test/java</testSourceDirectory>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+            </testResource>
+        </testResources>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>jmeter-test</id>
+            <properties>
+                <performancetest.loop_count>1000</performancetest.loop_count>
+                <performancetest.thread_count>100</performancetest.thread_count>
+                <performancetest.ramp_time>1</performancetest.ramp_time>
+                <performancetest.case_name>demoTest01</performancetest.case_name>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <version>2.2</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jar</goal>
+                                    <goal>test-jar</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>**/*</include>
+                                    </includes>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-test-jmeter-jar</id>
+                                <phase>package</phase>
+                                <configuration>
+                                    <tasks>
+                                        <copy todir="./target/jmeter/lib/ext">
+                                            <fileset dir="./target">
+                                                <include name="*-tests.jar"/>
+                                            </fileset>
+                                        </copy>
+                                    </tasks>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>com.lazerycode.jmeter</groupId>
+                        <artifactId>jmeter-maven-plugin</artifactId>
+                        <version>1.9.0</version>
+                        <configuration>
+                            <overrideRootLogLevel>error</overrideRootLogLevel>
+                            <!--
+                               By default, the console output during a jmeter test run is suppressed.
+                               We want to display the progress using the listener "Generate Summary Results"
+                               (which periodically prints stats to stdout). Therefore we have to make sure,
+                               that the jmeter output is not suppressed.
+                            -->
+                            <suppressJMeterOutput>false</suppressJMeterOutput>
+                            <ignoreResultFailures>true</ignoreResultFailures>
+                            <testResultsTimestamp>false</testResultsTimestamp>
+                            <testFilesIncluded>
+                                <jMeterTestFile>${performancetest.case_name}.jmx</jMeterTestFile>
+                            </testFilesIncluded>
+                            <propertiesJMeter>
+                                <jmeter.save.saveservice.thread_counts>true</jmeter.save.saveservice.thread_counts>
+                            </propertiesJMeter>
+
+                            <!--mvn clean verify -Dperformancetest.loop_count=10 -Dperformancetest.thread_count=10-->
+
+                            <propertiesUser>
+                                <loop_count>${performancetest.loop_count}</loop_count>
+                                <thread_count>${performancetest.thread_count}</thread_count>
+                                <ramp_time>${performancetest.ramp_time}</ramp_time>
+                            </propertiesUser>
+                        </configuration>
+
+                        <executions>
+                            <execution>
+                                <id>jmeter-tests</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>jmeter</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>com.lazerycode.jmeter</groupId>
+                        <artifactId>jmeter-analysis-maven-plugin</artifactId>
+                        <version>1.0.4</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>analyze</goal>
+                                </goals>
+                                <phase>post-integration-test</phase>
+                                <configuration>
+
+                                    <source>${project.build.directory}/jmeter/results/*</source>
+
+                                    <targetDirectory>${project.build.directory}/reports</targetDirectory>
+                                    <sampleNames>
+                                        <sampleName>sample</sampleName>
+                                    </sampleNames>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>de.codecentric</groupId>
+                        <artifactId>jmeter-graph-maven-plugin</artifactId>
+                        <version>0.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>create-graph-threads</id>
+                                <goals>
+                                    <goal>create-graph</goal>
+                                </goals>
+                                <phase>verify</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <inputFile>${project.build.directory}/jmeter/results/${performancetest.case_name}.jtl
+                            </inputFile>
+                            <graphs>
+                                <graph>
+                                    <pluginType>ThreadsStateOverTime</pluginType>
+                                    <width>800</width>
+                                    <height>600</height>
+                                    <outputFile>${project.build.directory}/jmeter/results/ThreadsStateOverTime.png
+                                    </outputFile>
+                                </graph>
+                                <graph>
+                                    <pluginType>ResponseTimesOverTime</pluginType>
+                                    <width>800</width>
+                                    <height>600</height>
+                                    <outputFile>${project.build.directory}/jmeter/results/ResponseTimesOverTime.png
+                                    </outputFile>
+                                </graph>
+                                <graph>
+                                    <pluginType>TransactionsPerSecond</pluginType>
+                                    <width>800</width>
+                                    <height>600</height>
+                                    <outputFile>${project.build.directory}/jmeter/results/TransactionsPerSecond.png
+                                    </outputFile>
+                                </graph>
+                            </graphs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>Codehaus repository</id>
+            <url>http://repository.codehaus.org/</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+</project>
